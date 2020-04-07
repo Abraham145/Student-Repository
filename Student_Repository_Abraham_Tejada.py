@@ -9,7 +9,7 @@ class Student:
     Stores information about a single student with all of the relevant information
     includes cwid, name, major and container for course grade
     """
-    pt_hdr: Tuple[str, str, str] = ["CWID", "Name", "Completed Courses"]
+    pt_hdr: Tuple[str, str, str, str, str, str] = ["CWID", "Name", "Completed Courses", "Remaining Required", "Remaining Electives", " GPA"]
 
     def __init__(self, cwid: str, name: str, major: str) -> None:
         """ initializes the variables for the class."""
@@ -24,6 +24,19 @@ class Student:
         note that this student took course and earned a grade
         """
         self._courses[course]: str = grade
+
+    # def add_remaining_require(self):
+    #   read the student file,
+    #   extract the remaining course
+    #   use set to display
+    # def add_remaining_elective(self):
+    #     set{}
+    # def add_gpa(self):
+    #
+    #     for grades in 'grades.txt';
+    #         gpa =+ grades
+    #
+
 
     def pt_row(self) -> Tuple[str, str, List[str]]:
         return self._cwid, self._name, sorted(self._courses.keys())
@@ -72,6 +85,7 @@ class Repository:
             self._read_students(path)
             self._read_instructor(path)
             self._read_grades(path)
+            self._read_majors(path)
         except ValueError as ve:
             print(ve)
         except FileNotFoundError as fnfe:
@@ -84,18 +98,26 @@ class Repository:
             print("\nInstructor Summary")
             self.instructor_table()
 
+
     def _read_students(self, path: str) -> None:
         # call file reader - path of the file ( comes from the directory) and the student.txt to
         # the directory os.path.join
         # file reader returns a tuple and you will get cwid, name, major,
 
-        for cwid, name, major in file_reader(os.path.join(path, 'students.txt'), 3, sep='\t', header=False):
+        for cwid, name, major in file_reader(os.path.join(path, 'students.txt'), 3, sep=';', header=True):
             self._students[cwid] = Student(cwid, name, major)
 
     def _read_instructor(self, path: str) -> None:
 
-        for cwid, name, department in file_reader(os.path.join(path, 'instructors.txt'), 3, sep='\t', header=False):
+        for cwid, name, department in file_reader(os.path.join(path, 'instructors.txt'), 3, sep='|', header=True):
             self._instructors[cwid] = Instructor(cwid, name, department)
+
+    def _read_majors(self, path: str) -> None:
+
+        for major, required, electives in file_reader(os.path.join(path, 'majors.txt'), 3, sep='/t', header=True):
+            pt: PrettyTable = PrettyTable(field_names=['Major', 'Required Courses', 'Electives'])
+            pt.add_row([major, required, electives])
+            print(pt)
 
     def _read_grades(self, path: str) -> None:
         # read student_cwid, course, grade, instructor_cwid
@@ -104,7 +126,7 @@ class Repository:
         # tell the instructor that she taught one more student in the course
 
         for student_cwid, course, grade, inst_cwid in file_reader(os.path.join(path, 'grades.txt'), 4,
-                                                                  sep='\t', header=False):
+                                                                  sep='|', header=True):
             if student_cwid in self._students:
                 self._students[student_cwid].add_course(course, grade)
             else:
@@ -116,8 +138,8 @@ class Repository:
             else:
                 print(f'found grade for unknown instructor {inst_cwid}')
 
+
     def student_table(self) -> None:
-        print('Student Summary')
         pt: PrettyTable = PrettyTable(field_names=Student.pt_hdr)
         for student in self._students.values():
             pt.add_row(student.pt_row())
@@ -132,7 +154,7 @@ class Repository:
 
 
 def main() -> None:
-    stevens: Repository = Repository('/Users/Abraham 1/Desktop/SSW810/HW/lab9/stevens')
+    stevens: Repository = Repository('/Users/Abraham 1/Desktop/SSW810/HW/github-repos/stevens')
 
 
 def file_reader(path: str, fields: int, sep: str = ',', header: bool = False) -> Iterator[List[str]]:
@@ -157,4 +179,4 @@ def file_reader(path: str, fields: int, sep: str = ',', header: bool = False) ->
                     yield tuple(tokens)
 
 
-check1 = Repository('/Users/Abraham 1/Desktop/SSW810/HW/lab9/stevens')
+check1 = Repository('/Users/Abraham 1/Desktop/SSW810/HW/github-repos/stevens')
