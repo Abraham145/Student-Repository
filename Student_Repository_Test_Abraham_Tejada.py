@@ -7,7 +7,7 @@ class RepositoryTest(unittest.TestCase):
 
     def test_majors_table(self):
         re = Repository('/Users/Abraham 1/Desktop/SSW810/HW/github-repos/Student-Repository/stevens')
-        expect = {'10103', 'SSW 567' 'A', '98765'}
+        expect = {'SFEN', 'R' 'SSW540', ''}
         result = re._read_grades('/Users/Abraham 1/Desktop/SSW810/HW/lab9/stevens')
         self.assertEqual(result, expect)
 
