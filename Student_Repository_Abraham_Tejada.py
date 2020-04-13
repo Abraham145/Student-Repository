@@ -2,7 +2,7 @@ import os
 from prettytable import PrettyTable
 from typing import Iterator, Tuple, IO, List, Dict, DefaultDict
 from collections import defaultdict
-
+from statistics import mean
 
 class Major:
     """
@@ -42,12 +42,16 @@ class Student:
     Stores information about a single student with all of the relevant information
     includes cwid, name, major and container for course grade
     """
-    pt_hdr: Tuple[str, str, str] = ["CWID", "Name", "Completed Courses", "Remaining Required", "Remaining Electives"]
+    pt_hdr: Tuple[str, str, str] = ["CWID", "Name", "Completed Courses", "Remaining Required", "Remaining Electives", "GPA"]
+    _passing_grades = {'A', '-A', 'B+', 'B-', 'C+', 'C'}
+    _grades_map: Dict[str, float] = {'A': 4.0, 'A-': 3.75,
+                                     'B+': 3.25, 'B': 3.0, 'B-': 2.75,
+                                     'C+': 2.25, 'C': 2.0, 'C-': 0,
+                                     'F': 0.0}
 
     def __init__(self, cwid: str, name: str, major: str, required: List[str], electives: List[str]) -> None:
         """ initializes the variables for the class."""
-        self._scores: Dict[str, float] = {'A': 4.0, '-A': 3.75, 'B+': 3.25, 'B-': 2.75, 'C+': 2.25, 'C': 2.0, 'C-': 0,
-                                          'F': 0.0}
+
         self._cwid: str = cwid
         self._name: str = name
         self._major: str = major
@@ -60,20 +64,27 @@ class Student:
         """
         note that this student took course and earned a grade
         """
-        passing_scores = {'A': 4.0, '-A': 3.75, 'B+': 3.25, 'B-': 2.75, 'C+': 2.25, 'C': 2.0}
-        failing_scores = {'C-': 0, 'D': 0, 'F': 0}
+        self._courses[course] = grade
 
-        if grade in passing_scores.keys():
+        if grade in Student._passing_grades:
             self._courses[course] = grade
             if course in self._required_remaining:
                 self._required_remaining.remove(course)
             elif course in self._electives_remaining:
-                self._electives_remaining = []
+                self._electives_remaining = set()
         else:
             pass
 
-    def pt_row(self) -> Tuple[str, str, List[str], List[str], List[str]]:
-        return self._cwid, self._name, sorted(self._courses.keys()), self._required_remaining, self._electives_remaining
+    def gpa(self):
+        points = [Student._grades_map[grade] for grade in self._courses.values()]
+        if len(points) >0:
+            return round(mean(points), 2)
+        else:
+            return 0.0
+
+
+    def pt_row(self) -> Tuple[str, str, List[str], List[str], List[str], float]:
+        return self._cwid, self._name, sorted(self._courses.keys()), self._required_remaining, self._electives_remaining, self.gpa()
 
 
 class Instructor:
