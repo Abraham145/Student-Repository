@@ -1,8 +1,10 @@
 import os
+import sqlite3
 from prettytable import PrettyTable
 from typing import Iterator, Tuple, IO, List, Dict, DefaultDict
 from collections import defaultdict
 from statistics import mean
+
 
 class Major:
     """
@@ -42,7 +44,8 @@ class Student:
     Stores information about a single student with all of the relevant information
     includes cwid, name, major and container for course grade
     """
-    pt_hdr: Tuple[str, str, str] = ["CWID", "Name", "Completed Courses", "Remaining Required", "Remaining Electives", "GPA"]
+    pt_hdr: Tuple[str, str, str] = ["CWID", "Name", "Completed Courses", "Remaining Required", "Remaining Electives",
+                                    "GPA"]
     _passing_grades = {'A', '-A', 'B+', 'B-', 'C+', 'C'}
     _grades_map: Dict[str, float] = {'A': 4.0, 'A-': 3.75,
                                      'B+': 3.25, 'B': 3.0, 'B-': 2.75,
@@ -77,14 +80,14 @@ class Student:
 
     def gpa(self):
         points = [Student._grades_map[grade] for grade in self._courses.values()]
-        if len(points) >0:
+        if len(points) > 0:
             return round(mean(points), 2)
         else:
             return 0.0
 
-
     def pt_row(self) -> Tuple[str, str, List[str], List[str], List[str], float]:
-        return self._cwid, self._name, sorted(self._courses.keys()), self._required_remaining, self._electives_remaining, self.gpa()
+        return self._cwid, self._name, sorted(
+            self._courses.keys()), self._required_remaining, self._electives_remaining, self.gpa()
 
 
 class Instructor:
@@ -126,7 +129,6 @@ class Repository:
         self._instructors: Dict[
             str, Instructor] = dict()  # key _instructors[cwid] = Student(), value instance of class Student
         self._majors: Dict[str, Major] = dict()
-        # self._majors[major] = Major()
 
         try:
             self._read_majors(path)
@@ -148,6 +150,9 @@ class Repository:
             print("\nInstructor Summary")
             self.instructor_table()
 
+            print("\nStudent Grade Summary")
+            self.student_db_table()
+
     def _read_majors(self, path: str):
         # - use file_reader to read the file one line at a time
         # - read major, R/E, course  # read the line
@@ -163,19 +168,19 @@ class Repository:
 
     def _read_students(self, path: str) -> None:
         # create new Student(cwid, name, major, required, electives)  # retrieve req, electives from self._majors[major]
-        for cwid, name, major in file_reader(os.path.join(path, 'students.txt'), 3, sep=';', header=True):
-            self._students[cwid] = Student(cwid, name, major, self._majors[major].get_required(), self._majors[major].get_electives())
-
+        for cwid, name, major in file_reader(os.path.join(path, 'students.txt'), 3, sep='\t', header=True):
+            self._students[cwid] = Student(cwid, name, major, self._majors[major].get_required(),
+                                           self._majors[major].get_electives())
 
     def _read_instructor(self, path: str) -> None:
 
-        for cwid, name, department in file_reader(os.path.join(path, 'instructors.txt'), 3, sep='|', header=True):
+        for cwid, name, department in file_reader(os.path.join(path, 'instructors.txt'), 3, sep='\t', header=True):
             self._instructors[cwid] = Instructor(cwid, name, department)
 
     def _read_grades(self, path: str) -> None:
 
         for student_cwid, course, grade, inst_cwid in file_reader(os.path.join(path, 'grades.txt'), 4,
-                                                                  sep='|', header=True):
+                                                                  sep='\t', header=True):
             if student_cwid in self._students:
                 self._students[student_cwid].add_course(course, grade)
             else:
@@ -206,12 +211,29 @@ class Repository:
                 pt.add_row(row)
         print(pt)
 
+    def student_db_table(self):
+        try:
+            db: sqlite3.Connection = sqlite3.connect(
+                '/Users/Abraham 1/Desktop/SSW810/HW/github-repos/Student-Repository/db/hw11at.sqlite')
+        except sqlite3.OperationalError as e:
+            print(e)
+        else:
+            pt: PrettyTable = PrettyTable(field_names=['Name', 'CWID', 'Course', 'Grade', 'Instructor'])
+            try:
+                for tup in db.execute('select s.name, s.cwid, g.Course, g.Grade, i.name from students s join grades g '
+                                      'on s.CWID = g.StudentCWID join instructors i on s.Major = i.Dept order by '
+                                      's.Name'):
+                    pt.add_row(tup)
+                print(pt)
+            except sqlite3.OperationalError as e:
+                print(e)
+
 
 def main() -> None:
-    stevens: Repository = Repository('/Users/Abraham 1/Desktop/SSW810/HW/github-repos/Student-Repository/stevens')
+    stevens: Repository = Repository('/Users/Abraham 1/Desktop/SSW810/HW/github-repos/Student-Repository/db')
 
 
-def file_reader(path: str, fields: int, sep: str = ',', header: bool = False) -> Iterator[List[str]]:
+def file_reader(path: str, fields: int, sep: str = '\t', header: bool = False) -> Iterator[List[str]]:
     """ Write a generator function file_reader() to read field-separated text files and yield a tuple with
     all of the values from a single line in the file on each call to next()
     """
